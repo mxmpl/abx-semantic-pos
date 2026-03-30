@@ -31,3 +31,4 @@ line-length = 119
 preview = true
 select = ["ALL"]
 ignore = ["CPY", "D", "DOC", "T201"]
+pylint = { max-args = 6 }

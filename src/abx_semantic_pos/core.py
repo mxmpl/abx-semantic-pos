@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import Literal
 
 import polars as pl
+import torch
 from fastabx import Dataset, Score, Subsampler, Task
+from fastabx.dataset import InMemoryAccessor, find_all_files, load_data_from_item
 from fastabx.pooling import pooling
 
 
@@ -20,35 +22,51 @@ def read_triplets(task: Literal["semantic", "pos"], split: Literal["dev", "test"
     return pl.read_ndjson(str(resources.files(__package__) / f"assets/{task}-{split}.jsonl.zst")).explode("b")
 
 
-def build_cells(triplets: pl.DataFrame, words: pl.DataFrame, *, threshold: int, seed: int) -> pl.DataFrame:
+def _build_cells_and_labels(
+    *,
+    triplets: pl.DataFrame,
+    words: pl.DataFrame,
+    subsampler: Subsampler,
+) -> tuple[pl.DataFrame, pl.DataFrame]:
     idx = words.lazy().with_row_index().group_by("word", maintain_order=True).agg("index")
     cells = (
         triplets.lazy()
-        .join(idx, left_on="a", right_on="word")
+        .join(idx, left_on="a", right_on="word", maintain_order="left")
         .rename({"index": "index_a"})
-        .join(idx, left_on="b", right_on="word")
+        .join(idx, left_on="b", right_on="word", maintain_order="left")
         .rename({"index": "index_b"})
-        .join(idx, left_on="x", right_on="word")
+        .join(idx, left_on="x", right_on="word", maintain_order="left")
         .rename({"index": "index_x"})
     )
-    return Subsampler(max_size_group=threshold, max_x_across=None, seed=seed)(cells, with_across=False).collect()
-
-
-def build_dataset(path_features: str | Path, cells: pl.DataFrame, words: pl.DataFrame, *, frequency: float) -> Dataset:
+    cells = subsampler(cells, with_across=False).collect()
     idx_used = (
         pl.concat(
             [
                 cells.lazy().select(pl.col(col).explode()).rename({col: "index"})
                 for col in ["index_a", "index_b", "index_x"]
-            ]
+            ],
         )
         .unique()
         .sort("index")
         .collect()
     )
+    words = (
+        words.with_row_index(name="orig_index")
+        .filter(pl.col("orig_index").is_in(idx_used["index"].implode()))
+        .with_row_index()
+    )
+    mapping = {row["orig_index"]: row["index"] for row in words[["index", "orig_index"]].to_dicts()}
+    cells = (
+        cells.with_columns(
+            pl.col(col).list.eval(pl.element().replace_strict(mapping)) for col in ["index_a", "index_b", "index_x"]
+        )
+        .with_columns(header=pl.concat_str(pl.lit("A="), "a", pl.lit(" B="), "b", pl.lit(" X="), "x"))
+        .with_columns(description="header")
+    )
+    return cells, words.drop("orig_index", "index")
 
 
-def abx_with_predefined_triplets(
+def _abx_with_predefined_triplets(
     triplets: pl.DataFrame,
     path_features: str | Path,
     path_words: str | Path,
@@ -58,11 +76,14 @@ def abx_with_predefined_triplets(
     seed: int,
 ) -> float:
     words = read_words(path_words)
-    cells = build_cells(triplets, words, threshold=threshold, seed=seed)
-    dataset = build_dataset(path_features, cells, words, frequency=frequency)
-    task = Task(pooling(dataset, "mean"), on="label", cells=cells)
+    subsampler = Subsampler(max_size_group=threshold, max_x_across=None, seed=seed)
+    cells, labels = _build_cells_and_labels(triplets=triplets, words=words, subsampler=subsampler)
+    paths = find_all_files(path_features, ".pt")
+    indices, data = load_data_from_item(paths, labels, frequency, torch.load, "file", "onset", "offset")
+    dataset = Dataset(labels=labels, accessor=InMemoryAccessor(indices, data))
+    task = Task(pooling(dataset, "mean"), on="word", cells=cells)
     task.is_symmetric = False
-    return Score(task, "angular").collapse()
+    return Score(task, "angular").collapse(levels=[])
 
 
 def abx_pos(
@@ -74,7 +95,7 @@ def abx_pos(
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
-    return abx_with_predefined_triplets(
+    return _abx_with_predefined_triplets(
         read_triplets("pos", split),
         path_features,
         path_words,
@@ -93,7 +114,7 @@ def abx_semantic(
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
-    return abx_with_predefined_triplets(
+    return _abx_with_predefined_triplets(
         read_triplets("semantic", split),
         path_features,
         path_words,
