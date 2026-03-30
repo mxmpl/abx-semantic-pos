@@ -10,6 +10,10 @@ dependencies = [
   "polars>=1.39.3",
 ]
 
+[project.scripts]
+abx-pos = "abx_semantic_pos.cli:pos_cli"
+abx-semantic = "abx_semantic_pos.cli:semantic_cli"
+
 [dependency-groups]
 dev = [
   "ipykernel>=7.2.0",
@@ -26,4 +30,4 @@ line-length = 119
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["CPY", "D", "DOC"]
+ignore = ["CPY", "D", "DOC", "T201"]

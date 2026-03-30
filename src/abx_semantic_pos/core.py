@@ -18,7 +18,7 @@ def read_words(source: str | Path) -> pl.DataFrame:
 
 
 def read_triplets(task: Literal["semantic", "pos"], split: Literal["dev", "test"]) -> pl.DataFrame:
-    return pl.read_ndjson(str(resources.files(__package__) / f"assets/{task}-{split}.jsonl.zst"))
+    return pl.read_ndjson(str(resources.files(__package__) / f"assets/{task}-{split}.jsonl.zst")).explode("b")
 
 
 def simple_abx_with_pooling(dataset: Dataset, *, distance_name: DistanceName = "angular") -> Score:
