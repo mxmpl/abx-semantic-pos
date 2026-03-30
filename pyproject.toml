@@ -1,5 +1,5 @@
 [project]
-name = "abx_semantic_pos"
+name = "abx-semantic-pos"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
