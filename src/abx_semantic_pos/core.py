@@ -3,8 +3,7 @@ from pathlib import Path
 from typing import Literal
 
 import polars as pl
-from fastabx import Dataset, Score, Task
-from fastabx.distance import DistanceName
+from fastabx import Dataset, Score, Subsampler, Task
 from fastabx.pooling import pooling
 
 
@@ -21,31 +20,84 @@ def read_triplets(task: Literal["semantic", "pos"], split: Literal["dev", "test"
     return pl.read_ndjson(str(resources.files(__package__) / f"assets/{task}-{split}.jsonl.zst")).explode("b")
 
 
-def simple_abx_with_pooling(dataset: Dataset, *, distance_name: DistanceName = "angular") -> Score:
-    return Score(Task(pooling(dataset, "mean"), on="index"), distance_name)
+def build_cells(triplets: pl.DataFrame, words: pl.DataFrame, *, threshold: int, seed: int) -> pl.DataFrame:
+    idx = words.lazy().with_row_index().group_by("word", maintain_order=True).agg("index")
+    cells = (
+        triplets.lazy()
+        .join(idx, left_on="a", right_on="word")
+        .rename({"index": "index_a"})
+        .join(idx, left_on="b", right_on="word")
+        .rename({"index": "index_b"})
+        .join(idx, left_on="x", right_on="word")
+        .rename({"index": "index_x"})
+    )
+    return Subsampler(max_size_group=threshold, max_x_across=None, seed=seed)(cells, with_across=False).collect()
+
+
+def build_dataset(path_features: str | Path, cells: pl.DataFrame, words: pl.DataFrame, *, frequency: float) -> Dataset:
+    idx_used = (
+        pl.concat(
+            [
+                cells.lazy().select(pl.col(col).explode()).rename({col: "index"})
+                for col in ["index_a", "index_b", "index_x"]
+            ]
+        )
+        .unique()
+        .sort("index")
+        .collect()
+    )
+
+
+def abx_with_predefined_triplets(
+    triplets: pl.DataFrame,
+    path_features: str | Path,
+    path_words: str | Path,
+    *,
+    frequency: float,
+    threshold: int,
+    seed: int,
+) -> float:
+    words = read_words(path_words)
+    cells = build_cells(triplets, words, threshold=threshold, seed=seed)
+    dataset = build_dataset(path_features, cells, words, frequency=frequency)
+    task = Task(pooling(dataset, "mean"), on="label", cells=cells)
+    task.is_symmetric = False
+    return Score(task, "angular").collapse()
 
 
 def abx_pos(
-    root: str | Path,
-    words: str | Path,
+    path_features: str | Path,
+    path_words: str | Path,
     *,
-    frequency: float = 50,
     split: Literal["dev", "test"] = "test",
+    frequency: float = 50,
+    threshold: int = 10,
+    seed: int = 0,
 ) -> float:
-    dataset = ...
-    distance_name = ...
-    score = simple_abx_with_pooling(dataset, distance_name=distance_name)
-    return score.collapse()
+    return abx_with_predefined_triplets(
+        read_triplets("pos", split),
+        path_features,
+        path_words,
+        frequency=frequency,
+        threshold=threshold,
+        seed=seed,
+    )
 
 
 def abx_semantic(
-    root: str | Path,
-    words: str | Path,
+    path_features: str | Path,
+    path_words: str | Path,
     *,
-    frequency: float = 50,
     split: Literal["dev", "test"] = "test",
+    frequency: float = 50,
+    threshold: int = 10,
+    seed: int = 0,
 ) -> float:
-    dataset = ...
-    distance_name = ...
-    score = simple_abx_with_pooling(dataset, distance_name=distance_name)
-    return score.collapse()
+    return abx_with_predefined_triplets(
+        read_triplets("semantic", split),
+        path_features,
+        path_words,
+        frequency=frequency,
+        threshold=threshold,
+        seed=seed,
+    )
