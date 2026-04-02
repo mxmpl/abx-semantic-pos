@@ -32,3 +32,6 @@ preview = true
 select = ["ALL"]
 ignore = ["CPY", "D", "DOC", "T201"]
 pylint = { max-args = 6 }
+
+[tool.uv.sources]
+fastabx = { git = "https://github.com/bootphon/fastabx.git" }
