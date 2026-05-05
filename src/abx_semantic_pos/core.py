@@ -8,6 +8,8 @@ from fastabx import Dataset, Score, Subsampler, Task
 from fastabx.dataset import InMemoryAccessor, find_all_files, load_data_from_item
 from fastabx.pooling import pooling
 
+__all__ = ["abx_pos", "abx_semantic", "read_triplets", "read_words"]
+
 
 def read_words(source: str | Path) -> pl.DataFrame:
     schema = {"file": pl.String, "onset": pl.String, "offset": pl.String, "word": pl.String}
@@ -66,12 +68,12 @@ def _build_cells_and_labels(
     return cells, words.drop("orig_index", "index")
 
 
-def _abx_with_predefined_triplets(
+def _abx_with_triplets(
     triplets: pl.DataFrame,
     path_features: str | Path,
     path_words: str | Path,
     *,
-    frequency: float,
+    frequency: int,
     threshold: int,
     seed: int,
 ) -> float:
@@ -91,18 +93,12 @@ def abx_pos(
     path_words: str | Path,
     *,
     split: Literal["dev", "test"] = "test",
-    frequency: float = 50,
+    frequency: int = 50,
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
-    return _abx_with_predefined_triplets(
-        read_triplets("pos", split),
-        path_features,
-        path_words,
-        frequency=frequency,
-        threshold=threshold,
-        seed=seed,
-    )
+    triplets = read_triplets("pos", split)
+    return _abx_with_triplets(triplets, path_features, path_words, frequency=frequency, threshold=threshold, seed=seed)
 
 
 def abx_semantic(
@@ -110,15 +106,9 @@ def abx_semantic(
     path_words: str | Path,
     *,
     split: Literal["dev", "test"] = "test",
-    frequency: float = 50,
+    frequency: int = 50,
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
-    return _abx_with_predefined_triplets(
-        read_triplets("semantic", split),
-        path_features,
-        path_words,
-        frequency=frequency,
-        threshold=threshold,
-        seed=seed,
-    )
+    triplets = read_triplets("semantic", split)
+    return _abx_with_triplets(triplets, path_features, path_words, frequency=frequency, threshold=threshold, seed=seed)
