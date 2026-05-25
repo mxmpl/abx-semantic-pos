@@ -19,7 +19,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastabx", git = "https://github.com/bootphon/fastabx.git" },
+    { name = "fastabx", specifier = ">=0.7.1" },
     { name = "polars", specifier = ">=1.39.3" },
 ]
 
@@ -232,14 +232,18 @@ wheels = [
 
 [[package]]
 name = "fastabx"
-version = "0.7.3.dev7+g80bc54def"
-source = { git = "https://github.com/bootphon/fastabx.git#80bc54def74668974ae2c18c0bb45483fcd31c63" }
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "polars" },
     { name = "torch" },
     { name = "torchdtw" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cc/a7/03733a4546c53dea84969ce74876c68b0fde501c6835d71a9ac3ca714f1b/fastabx-0.7.2.tar.gz", hash = "sha256:dd845752b378b10dd5535fcbbf01238bba50ad07de7c9cfdfea75f5e43616226", size = 411360, upload-time = "2026-04-15T16:12:53.461Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/db/11a9ba086a95fa58f16053dff3e052614ccf1b1742a2e89cfafefc6ab1fc/fastabx-0.7.2-py3-none-any.whl", hash = "sha256:e26f57bbb035d108b81c0a2fb4cb971ebaafc186196e410e9c5fe794d919f6d0", size = 24975, upload-time = "2026-04-15T16:12:52.15Z" },
 ]
 
 [[package]]
