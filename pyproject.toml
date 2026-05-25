@@ -26,8 +26,11 @@ line-length = 119
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["CPY", "D203", "D213"]
+ignore = ["CPY", "COM812", "D203", "D213"]
 pylint = { max-args = 6 }
+
+[tool.ty.src]
+exclude = ["replication/original"]
 
 [tool.uv.workspace]
 members = [

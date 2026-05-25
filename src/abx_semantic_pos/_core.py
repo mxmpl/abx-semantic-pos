@@ -160,7 +160,7 @@ def _abx_with_triplets(
     dataset = Dataset(labels=labels, accessor=InMemoryAccessor(indices, data))
     task = Task(pooling(dataset, "mean"), on="word", cells=cells)
     task.is_symmetric = False
-    return Score(task, "angular").collapse(levels=[])
+    return Score(task, "angular").collapse(levels=["b"])
 
 
 def abx_pos(
