@@ -28,3 +28,8 @@ preview = true
 select = ["ALL"]
 ignore = ["CPY", "D203", "D213"]
 pylint = { max-args = 6 }
+
+[tool.uv.workspace]
+members = [
+  "replication",
+]

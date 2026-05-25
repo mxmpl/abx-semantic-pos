@@ -1,0 +1,9 @@
+[project]
+name = "abx-semantic-pos-replication"
+version = "0.1.0"
+description = "Verify that results replicate the original implementation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pytest>=9.0.3",
+]

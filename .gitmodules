@@ -1,0 +1,3 @@
+[submodule "replication/original"]
+	path = replication/original
+	url = https://gitlab.cognitive-ml.fr/ralgayres/abx_sem_syn
