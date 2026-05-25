@@ -34,6 +34,7 @@ def generate_docs(search_path: str) -> str:
         "show_object_full_path": False,
     }
     md = griffe2md.render_object_docs(package, config)
+    md = re.sub(r"^## .+", "## API reference", md, count=1)
     return re.sub(r"\[([^\]]+)\]\(#[^)]+\)", r"\1", md)
 
 

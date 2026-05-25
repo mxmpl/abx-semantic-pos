@@ -7,7 +7,7 @@ Problems:
 - Also train splits
 
 <!-- griffe -->
-## `abx_semantic_pos`
+## API reference
 
 Syntactic and semantic ABX.
 
