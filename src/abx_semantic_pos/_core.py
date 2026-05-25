@@ -1,3 +1,5 @@
+import http.client
+from contextlib import closing
 from importlib import resources
 from pathlib import Path
 from typing import Literal
@@ -8,7 +10,49 @@ from fastabx import Dataset, Score, Subsampler, Task
 from fastabx.dataset import InMemoryAccessor, find_all_files, load_data_from_item
 from fastabx.pooling import pooling
 
-__all__ = ["abx_pos", "abx_semantic", "read_triplets", "read_words"]
+__all__ = ["abx_pos", "abx_semantic", "download_words", "read_triplets", "read_words"]
+
+
+class DownloadError(RuntimeError):
+    """Raised when a word annotation file fails to download."""
+
+    def __init__(self, name: str, status: int, reason: str) -> None:
+        """Create the exception."""
+        super().__init__(f"Failed to download {name}: HTTP {status} {reason}")
+
+
+def download_words(output: str | Path) -> Path:
+    """Download the word annotation files from GitHub to a local directory.
+
+    Args:
+        output: Directory where the files will be saved.
+
+    Returns:
+        Path to the output directory.
+
+    Raises:
+        DownloadError: If any file fails to download.
+
+    """
+    word_files = [
+        "dev-clean.zst",
+        "dev-other.zst",
+        "test-clean.zst",
+        "test-other.zst",
+        "train-clean-100.zst",
+        "train-clean-360.zst",
+        "train-other-500.zst",
+    ]
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    with closing(http.client.HTTPSConnection("raw.githubusercontent.com")) as conn:
+        for name in word_files:
+            conn.request("GET", f"/mxmpl/abx-semantic-pos/main/words/{name}")
+            response = conn.getresponse()
+            if response.status != http.client.OK:
+                raise DownloadError(name, response.status, response.reason)
+            (output / name).write_bytes(response.read())
+    return output
 
 
 def read_words(source: str | Path) -> pl.DataFrame:

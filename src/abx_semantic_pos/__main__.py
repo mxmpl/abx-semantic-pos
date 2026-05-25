@@ -3,7 +3,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from pathlib import Path
 
-from ._core import abx_pos, abx_semantic
+from ._core import abx_pos, abx_semantic, download_words
 
 
 def _add_args(parser: ArgumentParser) -> None:
@@ -16,27 +16,31 @@ def _add_args(parser: ArgumentParser) -> None:
     parser.add_argument("--split", choices=["dev", "test"], default="test", help="Which split to evaluate")
 
 
-def main() -> str:
-    """Entry point for the ABX evaluation CLI.
-
-    Returns:
-        The formatted score.
-
-    """
+def main() -> None:
+    """Entry point for the ABX evaluation CLI."""
     parser = ArgumentParser(description="ABX syntactic or semantic evaluation", allow_abbrev=False)
     sub = parser.add_subparsers(dest="task", required=True)
     _add_args(sub.add_parser("pos", help="Syntactic (part-of-speech)", formatter_class=ArgumentDefaultsHelpFormatter))
     _add_args(sub.add_parser("semantic", help="Semantic", formatter_class=ArgumentDefaultsHelpFormatter))
+    sub.add_parser(
+        "download",
+        help="Download word annotations from GitHub",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    ).add_argument("output", type=Path, help="Directory where the files will be saved")
+
     args = parser.parse_args()
-    score = (abx_pos if args.task == "pos" else abx_semantic)(
-        args.root,
-        args.words,
-        frequency=args.frequency,
-        threshold=args.threshold,
-        seed=args.seed,
-        split=args.split,
-    )
-    return f"{score}:.2%"
+    if args.task == "download":
+        download_words(args.output)
+    else:
+        score = (abx_pos if args.task == "pos" else abx_semantic)(
+            args.root,
+            args.words,
+            frequency=args.frequency,
+            threshold=args.threshold,
+            seed=args.seed,
+            split=args.split,
+        )
+        print(f"{score}:.2%")  # noqa: T201
 
 
 if __name__ == "__main__":

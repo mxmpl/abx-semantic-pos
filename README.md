@@ -53,6 +53,26 @@ Compute the ABX semantic score for the given features.
 
 - <code>float</code> – ABX score (angular distance, lower is better).
 
+### `download_words`
+
+```python
+download_words(output)
+```
+
+Download the word annotation files from GitHub to a local directory.
+
+**Parameters:**
+
+- **output** (<code>str | Path</code>) – Directory where the files will be saved.
+
+**Returns:**
+
+- <code>Path</code> – Path to the output directory.
+
+**Raises:**
+
+- <code>DownloadError</code> – If any file fails to download.
+
 ### `read_triplets`
 
 ```python
