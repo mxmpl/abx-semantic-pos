@@ -25,7 +25,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastabx", specifier = ">=0.7.1" },
+    { name = "fastabx", specifier = ">=0.7.2" },
     { name = "polars", specifier = ">=1.39.3" },
 ]
 

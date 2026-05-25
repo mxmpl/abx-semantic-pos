@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Maxime Poli" }, { name = "Robin Algayres" }]
 dependencies = [
-  "fastabx>=0.7.1",
+  "fastabx>=0.7.2",
   "polars>=1.39.3",
 ]
 
