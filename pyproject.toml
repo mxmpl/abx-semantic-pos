@@ -1,7 +1,7 @@
 [project]
 name = "abx-semantic-pos"
 version = "0.1.0"
-description = "Add your description here"
+description = "Syntactic and semantic ABX"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Maxime Poli" }, { name = "Robin Algayres" }]
@@ -9,10 +9,6 @@ dependencies = [
   "fastabx>=0.7.1",
   "polars>=1.39.3",
 ]
-
-[project.scripts]
-abx-pos = "abx_semantic_pos.cli:pos_cli"
-abx-semantic = "abx_semantic_pos.cli:semantic_cli"
 
 [dependency-groups]
 dev = [
@@ -30,7 +26,7 @@ line-length = 119
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["CPY", "D", "DOC", "T201"]
+ignore = ["CPY", "D203", "D213"]
 pylint = { max-args = 6 }
 
 [tool.uv.sources]

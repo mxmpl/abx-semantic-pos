@@ -12,6 +12,15 @@ __all__ = ["abx_pos", "abx_semantic", "read_triplets", "read_words"]
 
 
 def read_words(source: str | Path) -> pl.DataFrame:
+    """Read word annotations from a space-separated file into a DataFrame.
+
+    Args:
+        source: Path to the space-separated file with columns file, onset, offset, word.
+
+    Returns:
+        DataFrame with columns file (str), onset (Decimal), offset (Decimal), word (str).
+
+    """
     schema = {"file": pl.String, "onset": pl.String, "offset": pl.String, "word": pl.String}
     df = pl.read_csv(source, has_header=False, separator=" ", schema=schema)
     return df.with_columns(
@@ -21,6 +30,16 @@ def read_words(source: str | Path) -> pl.DataFrame:
 
 
 def read_triplets(task: Literal["semantic", "pos"], split: Literal["dev", "test"]) -> pl.DataFrame:
+    """Load ABX triplets from the bundled asset file for the given task and split.
+
+    Args:
+        task: Evaluation type, either ``"pos"`` (part-of-speech) or ``"semantic"``.
+        split: Dataset split to load, either ``"dev"`` or ``"test"``.
+
+    Returns:
+        DataFrame of ABX triplets with columns a, b (exploded), and x.
+
+    """
     return pl.read_ndjson(str(resources.files(__package__) / f"assets/{task}-{split}.jsonl.zst")).explode("b")
 
 
@@ -30,6 +49,12 @@ def _build_cells_and_labels(
     words: pl.DataFrame,
     subsampler: Subsampler,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Build subsampled cells and filtered labels DataFrames from triplets and word annotations.
+
+    Returns:
+        The subsampled cells and corresponding word labels.
+
+    """
     idx = words.lazy().with_row_index().group_by("word", maintain_order=True).agg("index")
     cells = (
         triplets.lazy()
@@ -77,6 +102,12 @@ def _abx_with_triplets(
     threshold: int,
     seed: int,
 ) -> float:
+    """Run ABX evaluation on preloaded triplets and return the angular score.
+
+    Returns:
+        The collapsed ABX error-rate.
+
+    """
     words = read_words(path_words)
     subsampler = Subsampler(max_size_group=threshold, max_x_across=None, seed=seed)
     cells, labels = _build_cells_and_labels(triplets=triplets, words=words, subsampler=subsampler)
@@ -97,6 +128,20 @@ def abx_pos(
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
+    """Compute the ABX part-of-speech score for the given features.
+
+    Args:
+        path_features: Path to the directory containing feature ``.pt`` files.
+        path_words: Path to the word annotations file.
+        split: Dataset split to evaluate on, either ``"dev"`` or ``"test"``.
+        frequency: Feature frequency used when loading data.
+        threshold: Maximum group size for subsampling.
+        seed: Random seed for subsampling.
+
+    Returns:
+        ABX score (angular distance, lower is better).
+
+    """
     triplets = read_triplets("pos", split)
     return _abx_with_triplets(triplets, path_features, path_words, frequency=frequency, threshold=threshold, seed=seed)
 
@@ -110,5 +155,19 @@ def abx_semantic(
     threshold: int = 10,
     seed: int = 0,
 ) -> float:
+    """Compute the ABX semantic score for the given features.
+
+    Args:
+        path_features: Path to the directory containing feature ``.pt`` files.
+        path_words: Path to the word annotations file.
+        split: Dataset split to evaluate on, either ``"dev"`` or ``"test"``.
+        frequency: Feature frequency used when loading data.
+        threshold: Maximum group size for subsampling.
+        seed: Random seed for subsampling.
+
+    Returns:
+        ABX score (angular distance, lower is better).
+
+    """
     triplets = read_triplets("semantic", split)
     return _abx_with_triplets(triplets, path_features, path_words, frequency=frequency, threshold=threshold, seed=seed)
