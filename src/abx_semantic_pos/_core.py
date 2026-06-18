@@ -6,9 +6,11 @@ from typing import Literal
 
 import polars as pl
 import torch
-from fastabx import Dataset, Score, Subsampler, Task
+from fastabx import Dataset, Score, Task
 from fastabx.dataset import InMemoryAccessor, find_all_files, load_data_from_item
 from fastabx.pooling import pooling
+
+from abx_semantic_pos._subsampler import HeadSubsampler
 
 __all__ = ["abx_pos", "abx_semantic", "download_words", "read_triplets", "read_words"]
 
@@ -91,7 +93,7 @@ def _build_cells_and_labels(
     *,
     triplets: pl.DataFrame,
     words: pl.DataFrame,
-    subsampler: Subsampler,
+    subsampler: HeadSubsampler,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """Build subsampled cells and filtered labels DataFrames from triplets and word annotations.
 
@@ -153,13 +155,12 @@ def _abx_with_triplets(
 
     """
     words = read_words(path_words)
-    subsampler = Subsampler(max_size_group=threshold, max_x_across=None, seed=seed)
+    subsampler = HeadSubsampler(max_size_group=threshold, max_x_across=None, seed=seed)
     cells, labels = _build_cells_and_labels(triplets=triplets, words=words, subsampler=subsampler)
     paths = find_all_files(path_features, ".pt")
     indices, data = load_data_from_item(paths, labels, frequency, torch.load, "file", "onset", "offset")
     dataset = Dataset(labels=labels, accessor=InMemoryAccessor(indices, data))
-    task = Task(pooling(dataset, "mean"), on="word", cells=cells)
-    task.is_symmetric = False
+    task = Task.from_cells(pooling(dataset, "mean"), cells, is_symmetric=False)
     return Score(task, "angular").collapse(levels=["b"])
 
 
